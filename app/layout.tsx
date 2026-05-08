@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Smooth, Draggable Product Grid | Codrops',
-  description: 'Smooth, draggable product grid with GSAP',
+  title: 'Shirtz — Apparel, Accessories, and More',
+  description: 'Browse and explore our T-shirt grid — drag, zoom in on details, and shop each piece.',
   icons: {
     icon: '/logos/white.svg',
   },

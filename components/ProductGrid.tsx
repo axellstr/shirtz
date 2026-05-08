@@ -26,39 +26,39 @@ const COLUMNS: number[][] = [
 
 const PRODUCTS: Record<number, { title: string; price: string; desc: string }> = {
   1: {
-    title: 'Crimson Amphora',
+    title: 'Crimson Crew',
     price: '$300,00',
-    desc: 'This bold red vase stands out with its vibrant hue, a perfect centerpiece to add passion and energy to any room. Its smooth surface and classic silhouette make it versatile, equally suited for modern interiors or traditional spaces, bringing warmth and a touch of drama wherever it is placed.',
+    desc: 'A saturated red tee that reads confident from across the room. Clean crew neckline, soft ring-spun cotton, and a fit that works tucked or loose—pair it with denim, cargos, or layered under a jacket when you want one loud pop of color.',
   },
   2: {
-    title: 'Rustic Urn',
+    title: 'Granite Heather',
     price: '$220,00',
-    desc: 'With its earthy tones and natural speckled finish, this rustic vase evokes the charm of handcrafted pottery. Its organic look and timeless shape give a sense of authenticity, making it an ideal piece to display dried flowers or simply as a decorative object that adds warmth and artisanal beauty to your home.',
+    desc: 'Earthy heather with subtle flecks for a worn-in, vintage feel straight off the rack. Mid-weight fabric holds its shape wash after wash—ideal for weekends, studio days, or anywhere you want effortless texture without shouting.',
   },
   3: {
-    title: 'Golden Vessel',
+    title: 'Sunbeam Standard',
     price: '$240,00',
-    desc: 'Bright and cheerful, the yellow vase radiates positivity. Its glossy surface reflects light beautifully, creating a lively focal point in any setting. Perfect for fresh blooms or displayed on its own, this vase captures the essence of sunshine and joy, effortlessly transforming spaces with a vibrant, uplifting touch of color.',
+    desc: 'Bright golden yellow that lifts neutrals and cheers up all-black fits. Breathable jersey with a smooth hand; wear it solo on sunny days or as the optimistic layer under open shirts and hoodies.',
   },
   4: {
-    title: 'Sunlit Amphora',
+    title: 'Solar Oversized',
     price: '$300,00',
-    desc: 'Generous in size and striking in presence, the large yellow vase makes a bold decorative statement. Its smooth curves and sunny shade are perfect for standing on the floor or dressing up a wide console. Both functional and eye-catching, it brings vitality and a contemporary edge to your interior design.',
+    desc: 'Roomy drop-shoulder cut in the same sunny palette—extra drape, extra ease. Built for relaxed silhouettes and streetwear proportions; great with bike shorts, wide trousers, or layered over a long tee.',
   },
   5: {
-    title: 'Midnight Reliquary',
+    title: 'Midnight Essential',
     price: '$390,00',
-    desc: 'Sleek and sophisticated, the black vase embodies timeless elegance. Its deep, rich tone makes it versatile, pairing effortlessly with minimalist or luxurious décors. Whether holding fresh greenery or standing alone as a sculptural accent, this piece exudes modern refinement and bold simplicity, creating contrast and balance within any interior style.',
+    desc: 'Deep black, minimal branding, maximum mileage. Premium cotton with a dense hand so it stays sharp—your default for evenings out, travel, or monochrome stacks where fit and fabric do the talking.',
   },
   6: {
-    title: 'Amber Ewer',
+    title: 'Golden Fleck',
     price: '$340,00',
-    desc: 'A playful mix of texture and color, the speckled yellow vase is both lively and unique. Its dotted surface creates movement and character, while the bright golden base ensures it remains eye-catching. Perfect for adding personality to your shelf or table, it combines artistic charm with a cheerful, inviting presence.',
+    desc: 'Speckled knit that mixes warm yellow with tonal dots for depth and personality. A conversation starter that still plays nice with basics—think festivals, coffee runs, or anytime plain tees feel too quiet.',
   },
   7: {
-    title: 'Sylvan Chalice',
+    title: 'Trailhead Organic',
     price: '$240,00',
-    desc: 'Crafted from natural wood, this vase celebrates organic beauty and timeless simplicity. The warm tones and smooth grain bring an earthy elegance to interiors. Perfect for dried arrangements or as a stand-alone piece, it highlights craftsmanship and natural textures, making it a versatile addition to rustic, modern, or eclectic décors.',
+    desc: 'Warm natural shade inspired by bark and trail dust—organic cotton with a soft, matte finish. Versatile with olive, cream, or charcoal; equally at home on a hike, at a desk, or layered under flannel when the temperature drops.',
   },
 }
 
@@ -364,7 +364,7 @@ export default function ProductGrid() {
 
       if (isMobile) {
         gsap.to(dom, { scale: 0.9, opacity: 0.3, duration: 1.2, ease: 'power3.inOut' })
-        gsap.to(details, { y: 0, duration: 1.2, ease: 'power3.inOut' })
+        gsap.to(details, { x: 0, y: 0, duration: 1.2, ease: 'power3.inOut' })
       } else {
         gsap.to(dom, { x: '-50vw', duration: 1.2, ease: 'power3.inOut' })
         gsap.to(details, { x: 0, duration: 1.2, ease: 'power3.inOut' })
@@ -415,7 +415,7 @@ export default function ProductGrid() {
             details.classList.remove('--is-showing')
           },
         })
-        gsap.to(details, { y: '100%', duration: 1.2, delay: 0.3, ease: 'power3.inOut' })
+        gsap.to(details, { x: 0, y: '100%', duration: 1.2, delay: 0.3, ease: 'power3.inOut' })
       } else {
         gsap.to(dom, {
           x: 0,
@@ -470,12 +470,35 @@ export default function ProductGrid() {
       })
 
       products.forEach((product) => {
+        let touchMoved = false
+
+        const onTouchStart = () => { touchMoved = false }
+        const onTouchMove = () => { touchMoved = true }
+
+        const onTouchEnd = (e: Event) => {
+          if (touchMoved || isDragging) return
+          e.stopPropagation()
+          e.preventDefault()
+          showDetails(product as HTMLDivElement)
+        }
+
         const onClick = (e: Event) => {
+          if (isDragging) return
           e.stopPropagation()
           showDetails(product as HTMLDivElement)
         }
+
+        product.addEventListener('touchstart', onTouchStart, { passive: true })
+        product.addEventListener('touchmove', onTouchMove, { passive: true })
+        product.addEventListener('touchend', onTouchEnd)
         product.addEventListener('click', onClick)
-        cleanupFns.push(() => product.removeEventListener('click', onClick))
+
+        cleanupFns.push(() => {
+          product.removeEventListener('touchstart', onTouchStart)
+          product.removeEventListener('touchmove', onTouchMove)
+          product.removeEventListener('touchend', onTouchEnd)
+          product.removeEventListener('click', onClick)
+        })
       })
 
       const onDomClick = () => {
@@ -487,8 +510,16 @@ export default function ProductGrid() {
       const onCrossClick = () => {
         if (SHOW_DETAILS) hideDetails()
       }
+      const onCrossTouch = (e: Event) => {
+        e.stopPropagation()
+        if (SHOW_DETAILS) hideDetails()
+      }
       cross.addEventListener('click', onCrossClick)
-      cleanupFns.push(() => cross.removeEventListener('click', onCrossClick))
+      cross.addEventListener('touchend', onCrossTouch)
+      cleanupFns.push(() => {
+        cross.removeEventListener('click', onCrossClick)
+        cross.removeEventListener('touchend', onCrossTouch)
+      })
     }
 
     // ── intro ──────────────────────────────────────────────────────────────
