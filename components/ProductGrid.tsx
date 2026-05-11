@@ -7,6 +7,8 @@ import { Draggable } from 'gsap/Draggable'
 import { Flip } from 'gsap/Flip'
 import { SplitText } from 'gsap/SplitText'
 import imagesLoaded from 'imagesloaded'
+import { PRODUCTS } from '@/data/products'
+import { useCartStore } from '@/lib/cart'
 
 gsap.registerPlugin(Draggable, Flip, SplitText)
 
@@ -24,56 +26,11 @@ const COLUMNS: number[][] = [
   [4, 6, 3, 5, 1],
 ]
 
-const PRODUCTS: Record<number, { title: string; price: string; desc: string }> = {
-  1: {
-    title: 'Crimson Crew',
-    price: '$300,00',
-    desc: 'A saturated red tee that reads confident from across the room. Clean crew neckline, soft ring-spun cotton, and a fit that works tucked or loose—pair it with denim, cargos, or layered under a jacket when you want one loud pop of color.',
-  },
-  2: {
-    title: 'Granite Heather',
-    price: '$220,00',
-    desc: 'Earthy heather with subtle flecks for a worn-in, vintage feel straight off the rack. Mid-weight fabric holds its shape wash after wash—ideal for weekends, studio days, or anywhere you want effortless texture without shouting.',
-  },
-  3: {
-    title: 'Sunbeam Standard',
-    price: '$240,00',
-    desc: 'Bright golden yellow that lifts neutrals and cheers up all-black fits. Breathable jersey with a smooth hand; wear it solo on sunny days or as the optimistic layer under open shirts and hoodies.',
-  },
-  4: {
-    title: 'Solar Oversized',
-    price: '$300,00',
-    desc: 'Roomy drop-shoulder cut in the same sunny palette—extra drape, extra ease. Built for relaxed silhouettes and streetwear proportions; great with bike shorts, wide trousers, or layered over a long tee.',
-  },
-  5: {
-    title: 'Midnight Essential',
-    price: '$390,00',
-    desc: 'Deep black, minimal branding, maximum mileage. Premium cotton with a dense hand so it stays sharp—your default for evenings out, travel, or monochrome stacks where fit and fabric do the talking.',
-  },
-  6: {
-    title: 'Golden Fleck',
-    price: '$340,00',
-    desc: 'Speckled knit that mixes warm yellow with tonal dots for depth and personality. A conversation starter that still plays nice with basics—think festivals, coffee runs, or anytime plain tees feel too quiet.',
-  },
-  7: {
-    title: 'Trailhead Organic',
-    price: '$240,00',
-    desc: 'Warm natural shade inspired by bark and trail dust—organic cotton with a soft, matte finish. Versatile with olive, cream, or charcoal; equally at home on a hike, at a desk, or layered under flannel when the temperature drops.',
-  },
-}
-
-const PRODUCT_IMAGES: Record<number, string> = {
-  1: '/BUntitled.png',
-  2: '/GUntitled.png',
-  3: '/OUntitled.png',
-  4: '/PUntitled.png',
-  5: '/Untitled.png',
-  6: '/VUntitled.png',
-  7: '/WUntitled.png',
-}
+const PRODUCTS_MAP = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]))
 
 export default function ProductGrid() {
   const mainRef = useRef<HTMLElement>(null)
+  const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
     const main = mainRef.current
@@ -585,8 +542,8 @@ export default function ProductGrid() {
                 <div key={`${colIdx}-${itemIdx}`} className="product">
                   <div data-id={id}>
                     <Image
-                      src={PRODUCT_IMAGES[id]}
-                      alt={PRODUCTS[id]?.title ?? `Product ${id}`}
+                      src={PRODUCTS_MAP[id]?.image ?? ''}
+                      alt={PRODUCTS_MAP[id]?.name ?? `Product ${id}`}
                       fill
                       sizes="(max-width: 600px) 90vw, 25vw"
                       style={{ objectFit: 'contain' }}
@@ -601,20 +558,34 @@ export default function ProductGrid() {
 
       <div className="details">
         <div className="details__title">
-          {Object.entries(PRODUCTS).map(([id, { title }]) => (
-            <p key={id} data-title={id} data-text="">
-              {title}
+          {PRODUCTS.map((product) => (
+            <p key={product.id} data-title={product.id} data-text="">
+              {product.name}
             </p>
           ))}
         </div>
         <div className="details__body">
           <div className="details__thumb" />
           <div className="details__texts">
-            {Object.entries(PRODUCTS).map(([id, { price, desc }]) => (
-              <p key={id} data-desc={id} data-text="">
-                <span>{price}</span>
-                {desc}
-                <button type="button">Add to cart</button>
+            {PRODUCTS.map((product) => (
+              <p key={product.id} data-desc={product.id} data-text="">
+                <span>${product.price.toFixed(2)}</span>
+                {product.description}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    addItem({
+                      productId: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: product.image,
+                      size: product.sizes[0] ?? 'M',
+                    })
+                  }}
+                >
+                  Add to cart
+                </button>
               </p>
             ))}
           </div>
