@@ -1,7 +1,8 @@
 'use client'
 
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, useLayoutEffect, useRef, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import gsap from 'gsap'
 import { SplitText } from 'gsap/SplitText'
@@ -11,16 +12,12 @@ import type { Size } from '@/data/products'
 gsap.registerPlugin(SplitText)
 
 function CheckoutFallback() {
-  useEffect(() => {
-    document.body.classList.remove('loading')
-  }, [])
-
   return (
     <main className="checkout checkout--fallback">
       <header className="site-header">
-        <a href="/" className="site-header__brand" aria-label="Home">
+        <Link href="/" className="site-header__brand" aria-label="Home">
           <img src="/logos/text.svg" alt="" className="site-header__logo" width={529} height={137} />
-        </a>
+        </Link>
       </header>
       <p className="checkout__fallback-text">Loading…</p>
     </main>
@@ -44,10 +41,6 @@ function CheckoutInner() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
-
-  useEffect(() => {
-    document.body.classList.remove('loading')
-  }, [])
 
   useLayoutEffect(() => {
     if (!product || !mainRef.current) return
@@ -231,17 +224,17 @@ function CheckoutInner() {
     return (
       <main ref={mainRef} className="checkout checkout--empty">
         <header className="site-header">
-          <a href="/" className="site-header__brand" aria-label="Home">
+          <Link href="/" className="site-header__brand" aria-label="Home">
             <img src="/logos/text.svg" alt="" className="site-header__logo" width={529} height={137} />
-          </a>
+          </Link>
         </header>
 
         <div className="checkout__inner">
           <p className="checkout__empty-title">Product not found</p>
           <p className="checkout__empty-copy">Check the link or pick another tee from the grid.</p>
-          <a href="/" className="checkout__back-link">
+          <Link href="/" className="checkout__back-link">
             Back to shop
-          </a>
+          </Link>
         </div>
       </main>
     )
@@ -281,9 +274,9 @@ function CheckoutInner() {
   return (
     <main ref={mainRef} className="checkout">
       <header className="site-header">
-        <a href="/" className="site-header__brand" aria-label="Home">
+        <Link href="/" className="site-header__brand" aria-label="Home">
           <img src="/logos/text.svg" alt="" className="site-header__logo" width={529} height={137} />
-        </a>
+        </Link>
       </header>
 
       <div className="checkout__inner">
@@ -300,9 +293,9 @@ function CheckoutInner() {
           </div>
 
           <div className="checkout__panel">
-            <a href="/" className="checkout__back-link checkout__back-link--subtle">
+            <Link href="/" className="checkout__back-link checkout__back-link--subtle">
               ← Back
-            </a>
+            </Link>
 
             <h1 className="checkout__title">{product.name}</h1>
             <p className="checkout__price">${product.price.toFixed(2)}</p>

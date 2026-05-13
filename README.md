@@ -19,7 +19,7 @@ A draggable product grid with rich GSAP animations. Click a product, watch it fl
 | UI | React 18 |
 | Animation | GSAP 3 (Draggable, Flip, SplitText) |
 | State | Zustand 5 |
-| Image loading | imagesloaded 5 |
+| Image boot | Unique PNG preload + 2s cap (native `Image`/`decode`) |
 
 ---
 
@@ -30,7 +30,7 @@ shirtz/
 ├── app/
 │   ├── layout.tsx          # Root layout, metadata, favicon
 │   ├── page.tsx            # Single route — renders ProductGrid
-│   └── globals.css         # Global styles, CSS custom properties, loading state
+│   └── globals.css         # Global styles, CSS custom properties
 ├── components/
 │   └── ProductGrid.tsx     # Entire interactive UI (grid, detail panel, animations)
 ├── data/
@@ -54,8 +54,7 @@ shirtz/
 - **Animated detail panel** — desktop: grid slides left, panel slides in from right; mobile: panel slides up from bottom
 - **Flip animation** — clicked product tile "flies" into the detail panel thumbnail
 - **SplitText reveals** — product title and description animate in line-by-line / character-by-character
-- **Image preload gate** — intro animation only runs after all grid images have loaded (`imagesloaded`)
-- **Loading screen** — CSS `body.loading` state with a pseudo-element loader
+- **Image preload gate** — intro waits for the seven unique product PNGs to decode (hard cap 2s), without a full-page loader overlay
 - **IntersectionObserver** — tiles fade/scale in as they enter the viewport
 - **Cursor-following close button** — desktop only
 - **Add to cart** — updates Zustand store; no persistence, no checkout, no cart UI
@@ -89,7 +88,25 @@ Stripe Checkout requires:
 ```bash
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+STRIPE_IMAGE_BASE_URL=
 ```
+
+For local Stripe image previews, `NEXT_PUBLIC_SITE_URL` can stay on localhost for redirects, but
+`STRIPE_IMAGE_BASE_URL` must be a public tunnel URL because Stripe cannot fetch localhost assets:
+
+```bash
+npm run dev
+npx localtunnel --port 3000
+```
+
+Then set the tunnel URL in `.env` and restart the dev server:
+
+```bash
+STRIPE_IMAGE_BASE_URL=https://your-tunnel-url.loca.lt
+```
+
+For production, set `NEXT_PUBLIC_SITE_URL` to the live site URL. On Vercel, the checkout route can
+also fall back to `VERCEL_URL` for Stripe images if `NEXT_PUBLIC_SITE_URL` is not configured.
 
 ---
 

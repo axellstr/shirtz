@@ -1,18 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
+import Link from 'next/link'
 
 export default function CheckoutSuccessPage() {
-  useEffect(() => {
-    document.body.classList.remove('loading')
-  }, [])
-
   return (
     <main className="checkout checkout--empty">
       <header className="site-header">
-        <a href="/" className="site-header__brand" aria-label="Home">
+        <Link href="/" className="site-header__brand" aria-label="Home">
           <img src="/logos/text.svg" alt="" className="site-header__logo" width={529} height={137} />
-        </a>
+        </Link>
       </header>
 
       <div className="checkout__inner">
@@ -21,9 +17,9 @@ export default function CheckoutSuccessPage() {
           <p className="checkout__done-copy">
             Thanks for shopping Shirtz. Stripe sent you back after a completed Checkout session.
           </p>
-          <a href="/" className="checkout__back-link">
+          <Link href="/" className="checkout__back-link">
             Continue shopping
-          </a>
+          </Link>
         </div>
       </div>
     </main>

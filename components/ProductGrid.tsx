@@ -1,16 +1,44 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import Image from 'next/image'
+import NextImage from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 import { Draggable } from 'gsap/Draggable'
 import { Flip } from 'gsap/Flip'
 import { SplitText } from 'gsap/SplitText'
-import imagesLoaded from 'imagesloaded'
 import { PRODUCTS } from '@/data/products'
 
 gsap.registerPlugin(Draggable, Flip, SplitText)
+
+const UNIQUE_PRODUCT_IMAGE_SRCS = Array.from(new Set(PRODUCTS.map((p) => p.image)))
+const MAX_IMAGE_WAIT_MS = 2000
+
+/** Preload unique product assets so cached DOM images share the same fetch/decode path. */
+function preloadUniqueProductImages(srcs: string[]): Promise<void> {
+  return Promise.all(
+    srcs.map(
+      (src) =>
+        new Promise<void>((resolve) => {
+          if (!src) {
+            resolve()
+            return
+          }
+          const img = new Image()
+          img.onload = () => {
+            if (typeof img.decode === 'function') {
+              img.decode().then(() => resolve()).catch(() => resolve())
+              return
+            }
+            resolve()
+          }
+          img.onerror = () => resolve()
+          img.src = src
+        }),
+    ),
+  ).then(() => {})
+}
 
 // Grid column layout — original demo column order
 const COLUMNS: number[][] = [
@@ -27,7 +55,6 @@ const COLUMNS: number[][] = [
 ]
 
 const PRODUCTS_MAP = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]))
-const MIN_LOADING_MS = 1000
 
 export default function ProductGrid() {
   const mainRef = useRef<HTMLElement>(null)
@@ -56,11 +83,8 @@ export default function ProductGrid() {
     let splitTitlesInstance: SplitText | null = null
     let splitTextsInstance: SplitText | null = null
     let intersectionObserver: IntersectionObserver | null = null
-    let loadingTimer: number | null = null
-    let loadingFallbackTimer: number | null = null
     let isDisposed = false
     let hasFinishedLoading = false
-    const loadingStartedAt = window.performance.now()
 
     // Collect cleanup callbacks so all event listeners are removed on unmount
     const cleanupFns: Array<() => void> = []
@@ -533,37 +557,24 @@ export default function ProductGrid() {
     function finishLoading() {
       if (isDisposed || hasFinishedLoading) return
       hasFinishedLoading = true
-
-      try {
-        intro()
-      } finally {
-        document.body.classList.remove('loading')
-      }
+      intro()
     }
 
-    // ── Bootstrap: preload images, then run intro ──────────────────────────
-    const gridImages = Array.from(main.querySelectorAll<HTMLImageElement>('.grid img'))
-    const imgLoader = imagesLoaded(gridImages)
-    loadingFallbackTimer = window.setTimeout(finishLoading, 8000)
+    // ── Bootstrap: preload unique product images, cap wait at MAX_IMAGE_WAIT_MS ─
+    const bootPromise = Promise.race([
+      preloadUniqueProductImages(UNIQUE_PRODUCT_IMAGE_SRCS),
+      new Promise<void>((resolve) => {
+        window.setTimeout(resolve, MAX_IMAGE_WAIT_MS)
+      }),
+    ])
 
-    imgLoader.on('always', async () => {
-      await Promise.allSettled(gridImages.map((img) => img.decode?.() ?? Promise.resolve()))
-      if (isDisposed) return
-
-      const elapsed = window.performance.now() - loadingStartedAt
-      const remaining = Math.max(0, MIN_LOADING_MS - elapsed)
-
-      loadingTimer = window.setTimeout(() => {
-        finishLoading()
-      }, remaining)
+    void bootPromise.then(() => {
+      if (!isDisposed) finishLoading()
     })
 
     // ── Cleanup on unmount ─────────────────────────────────────────────────
     return () => {
       isDisposed = true
-      if (loadingTimer) window.clearTimeout(loadingTimer)
-      if (loadingFallbackTimer) window.clearTimeout(loadingFallbackTimer)
-      document.body.classList.remove('loading')
       cleanupFns.forEach((fn) => fn())
       gsap.killTweensOf([dom, grid, details, cross, ...products])
       splitTitlesInstance?.revert()
@@ -575,9 +586,9 @@ export default function ProductGrid() {
   return (
     <main ref={mainRef}>
       <header className="site-header">
-        <a href="/" className="site-header__brand" aria-label="Home">
+        <Link href="/" className="site-header__brand" aria-label="Home">
           <img src="/logos/text.svg" alt="" className="site-header__logo" width={529} height={137} />
-        </a>
+        </Link>
       </header>
 
       <div className="container">
@@ -587,10 +598,12 @@ export default function ProductGrid() {
               {ids.map((id, itemIdx) => (
                 <div key={`${colIdx}-${itemIdx}`} className="product">
                   <div data-id={id}>
-                    <Image
+                    <NextImage
                       src={PRODUCTS_MAP[id]?.image ?? ''}
                       alt={PRODUCTS_MAP[id]?.name ?? `Product ${id}`}
                       fill
+                      unoptimized
+                      loading="eager"
                       sizes="(max-width: 600px) 90vw, 25vw"
                       style={{ objectFit: 'contain' }}
                     />

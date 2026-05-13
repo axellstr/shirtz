@@ -9,11 +9,49 @@ type CheckoutRequest = {
   size?: unknown
 }
 
-function getSiteUrl(request: Request) {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-  const baseUrl = configuredUrl && configuredUrl.length > 0 ? configuredUrl : new URL(request.url).origin
+function normalizeBaseUrl(value: string | undefined) {
+  const trimmed = value?.trim()
 
-  return baseUrl.replace(/\/$/, '')
+  if (!trimmed) return undefined
+
+  return trimmed.replace(/\/$/, '')
+}
+
+function getVercelUrl() {
+  const vercelUrl = normalizeBaseUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL)
+
+  if (!vercelUrl) return undefined
+
+  return vercelUrl.startsWith('http') ? vercelUrl : `https://${vercelUrl}`
+}
+
+function isLocalUrl(value: string) {
+  try {
+    const url = new URL(value)
+
+    return ['localhost', '127.0.0.1', '0.0.0.0'].includes(url.hostname)
+  } catch {
+    return false
+  }
+}
+
+function getSiteUrl(request: Request) {
+  const configuredUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL)
+  const baseUrl = configuredUrl ?? getVercelUrl() ?? new URL(request.url).origin
+
+  return baseUrl
+}
+
+function getStripeImageBaseUrl(siteUrl: string) {
+  const configuredStripeUrl = normalizeBaseUrl(process.env.STRIPE_IMAGE_BASE_URL)
+
+  if (configuredStripeUrl) return configuredStripeUrl
+
+  const configuredSiteUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL)
+
+  if (configuredSiteUrl && !isLocalUrl(configuredSiteUrl)) return configuredSiteUrl
+
+  return getVercelUrl() ?? siteUrl
 }
 
 export async function POST(request: Request) {
@@ -45,7 +83,7 @@ export async function POST(request: Request) {
 
   try {
     const siteUrl = getSiteUrl(request)
-    const imageUrl = new URL(product.image, siteUrl).toString()
+    const imageUrl = new URL(product.checkoutImage, getStripeImageBaseUrl(siteUrl)).toString()
     const stripe = getStripe()
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
