@@ -13,6 +13,7 @@ out
 .parcel-cache
 
 # Environment
+.env
 .env*.local
 
 # OS

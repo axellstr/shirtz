@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 import { Draggable } from 'gsap/Draggable'
 import { Flip } from 'gsap/Flip'
 import { SplitText } from 'gsap/SplitText'
 import imagesLoaded from 'imagesloaded'
 import { PRODUCTS } from '@/data/products'
-import { useCartStore } from '@/lib/cart'
 
 gsap.registerPlugin(Draggable, Flip, SplitText)
 
@@ -27,10 +27,11 @@ const COLUMNS: number[][] = [
 ]
 
 const PRODUCTS_MAP = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]))
+const MIN_LOADING_MS = 1000
 
 export default function ProductGrid() {
   const mainRef = useRef<HTMLElement>(null)
-  const addItem = useCartStore((state) => state.addItem)
+  const router = useRouter()
 
   useEffect(() => {
     const main = mainRef.current
@@ -55,6 +56,11 @@ export default function ProductGrid() {
     let splitTitlesInstance: SplitText | null = null
     let splitTextsInstance: SplitText | null = null
     let intersectionObserver: IntersectionObserver | null = null
+    let loadingTimer: number | null = null
+    let loadingFallbackTimer: number | null = null
+    let isDisposed = false
+    let hasFinishedLoading = false
+    const loadingStartedAt = window.performance.now()
 
     // Collect cleanup callbacks so all event listeners are removed on unmount
     const cleanupFns: Array<() => void> = []
@@ -330,6 +336,16 @@ export default function ProductGrid() {
       flipProduct(product)
 
       const id = product.dataset.id
+      const textsWrap = details.querySelector('.details__texts')
+      if (textsWrap) {
+        textsWrap.querySelectorAll<HTMLElement>('[data-desc]').forEach((el) => {
+          el.classList.remove('--is-active-desc')
+        })
+        if (id) {
+          textsWrap.querySelector(`[data-desc="${id}"]`)?.classList.add('--is-active-desc')
+        }
+      }
+
       const title = details.querySelector<HTMLElement>(`[data-title="${id}"]`)
       const text = details.querySelector<HTMLElement>(`[data-desc="${id}"]`)
 
@@ -358,6 +374,11 @@ export default function ProductGrid() {
     function hideDetails() {
       SHOW_DETAILS = false
       dom.classList.remove('--is-details-showing')
+
+      const textsWrap = details.querySelector('.details__texts')
+      textsWrap?.querySelectorAll<HTMLElement>('[data-desc]').forEach((el) => {
+        el.classList.remove('--is-active-desc')
+      })
 
       const isMobile = window.innerWidth <= 768
 
@@ -509,15 +530,40 @@ export default function ProductGrid() {
       })
     }
 
+    function finishLoading() {
+      if (isDisposed || hasFinishedLoading) return
+      hasFinishedLoading = true
+
+      try {
+        intro()
+      } finally {
+        document.body.classList.remove('loading')
+      }
+    }
+
     // ── Bootstrap: preload images, then run intro ──────────────────────────
-    const imgLoader = imagesLoaded(main.querySelectorAll<HTMLImageElement>('.grid img'))
-    imgLoader.on('always', () => {
-      intro()
-      document.body.classList.remove('loading')
+    const gridImages = Array.from(main.querySelectorAll<HTMLImageElement>('.grid img'))
+    const imgLoader = imagesLoaded(gridImages)
+    loadingFallbackTimer = window.setTimeout(finishLoading, 8000)
+
+    imgLoader.on('always', async () => {
+      await Promise.allSettled(gridImages.map((img) => img.decode?.() ?? Promise.resolve()))
+      if (isDisposed) return
+
+      const elapsed = window.performance.now() - loadingStartedAt
+      const remaining = Math.max(0, MIN_LOADING_MS - elapsed)
+
+      loadingTimer = window.setTimeout(() => {
+        finishLoading()
+      }, remaining)
     })
 
     // ── Cleanup on unmount ─────────────────────────────────────────────────
     return () => {
+      isDisposed = true
+      if (loadingTimer) window.clearTimeout(loadingTimer)
+      if (loadingFallbackTimer) window.clearTimeout(loadingFallbackTimer)
+      document.body.classList.remove('loading')
       cleanupFns.forEach((fn) => fn())
       gsap.killTweensOf([dom, grid, details, cross, ...products])
       splitTitlesInstance?.revert()
@@ -575,16 +621,10 @@ export default function ProductGrid() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    addItem({
-                      productId: product.id,
-                      name: product.name,
-                      price: product.price,
-                      image: product.image,
-                      size: product.sizes[0] ?? 'M',
-                    })
+                    router.push(`/checkout?id=${product.id}`)
                   }}
                 >
-                  Add to cart
+                  Checkout
                 </button>
               </p>
             ))}
